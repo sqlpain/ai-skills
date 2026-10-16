@@ -1,0 +1,1204 @@
+<!-- tracker-viewer v1 -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tracker</title>
+<style>
+:root {
+  --bg: #f5f6f8; --surface: #ffffff; --surface-2: #f0f2f5; --text: #1b1f24; --muted: #667085;
+  --border: #e1e4ea; --accent: #2557d6; --accent-soft: #e8eefc;
+  --grey-bg: #eceff3; --grey-fg: #4b5563;
+  --blue-bg: #e3edff; --blue-fg: #1d4ed8;
+  --amber-bg: #fff1d6; --amber-fg: #92580a;
+  --green-bg: #dcf5e4; --green-fg: #19713a;
+  --red-bg: #fde4e4; --red-fg: #a12626;
+  --shadow: 0 1px 2px rgba(16,24,40,.06), 0 1px 3px rgba(16,24,40,.08);
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #101216; --surface: #181b21; --surface-2: #20242b; --text: #e7e9ee; --muted: #98a1b2;
+    --border: #2a2f38; --accent: #7aa2ff; --accent-soft: #1f2a44;
+    --grey-bg: #2a2f38; --grey-fg: #b4bcc9;
+    --blue-bg: #1c2d52; --blue-fg: #9db8ff;
+    --amber-bg: #3d2f12; --amber-fg: #f0c36d;
+    --green-bg: #15342a; --green-fg: #7fd7a0;
+    --red-bg: #3d1c1c; --red-fg: #f0a0a0;
+    --shadow: none;
+  }
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body { background: var(--bg); color: var(--text); font: 14px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+a { color: var(--accent); text-decoration: none; }
+a:hover { text-decoration: underline; }
+button, select, input { font: inherit; color: inherit; }
+button { background: var(--surface); border: 1px solid var(--border); border-radius: 6px; padding: 4px 10px; cursor: pointer; }
+button:hover { background: var(--surface-2); }
+button.primary { background: var(--accent); border-color: var(--accent); color: #fff; padding: 8px 16px; }
+select, input[type=search] { background: var(--surface); border: 1px solid var(--border); border-radius: 6px; padding: 4px 8px; }
+code, pre { font: 12.5px/1.45 ui-monospace, "Cascadia Code", Consolas, monospace; }
+code { background: var(--surface-2); padding: 1px 4px; border-radius: 4px; }
+pre { background: var(--surface-2); border: 1px solid var(--border); border-radius: 6px; padding: 10px 12px; overflow: auto; }
+pre code { background: none; padding: 0; }
+
+header.top { position: sticky; top: 0; z-index: 5; background: var(--surface); border-bottom: 1px solid var(--border); }
+.top-row { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 16px; padding: 10px 20px; }
+.brand { font-weight: 650; font-size: 16px; }
+.brand small { color: var(--muted); font-weight: 400; margin-left: 8px; }
+.spacer { flex: 1; }
+.status { color: var(--muted); font-size: 12px; }
+.status.err { color: var(--red-fg); }
+nav.tabs { display: flex; gap: 2px; padding: 0 16px; overflow-x: auto; }
+nav.tabs a { color: var(--muted); padding: 8px 12px; border-bottom: 2px solid transparent; white-space: nowrap; }
+nav.tabs a:hover { text-decoration: none; color: var(--text); }
+nav.tabs a.active { color: var(--accent); border-bottom-color: var(--accent); font-weight: 600; }
+nav.tabs .count { background: var(--grey-bg); color: var(--grey-fg); border-radius: 10px; padding: 0 7px; font-size: 11px; margin-left: 6px; }
+nav.tabs .count.warn { background: var(--red-bg); color: var(--red-fg); }
+
+main { max-width: 1280px; margin: 0 auto; padding: 20px; }
+h2.section { font-size: 13px; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); margin: 26px 0 10px; }
+h2.section:first-child { margin-top: 0; }
+.card { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; box-shadow: var(--shadow); }
+.pad { padding: 14px 16px; }
+.empty { color: var(--muted); padding: 18px; text-align: center; }
+.allclear { color: var(--green-fg); background: var(--green-bg); border-radius: 8px; padding: 10px 14px; }
+
+.tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 12px; }
+.tile { padding: 12px 14px; }
+.tile .n { font-size: 26px; font-weight: 650; line-height: 1.1; }
+.tile .l { color: var(--muted); font-size: 12px; }
+
+.badge { display: inline-block; font-size: 11.5px; font-weight: 600; padding: 1px 8px; border-radius: 10px; white-space: nowrap; }
+.grey { background: var(--grey-bg); color: var(--grey-fg); }
+.blue { background: var(--blue-bg); color: var(--blue-fg); }
+.amber { background: var(--amber-bg); color: var(--amber-fg); }
+.green { background: var(--green-bg); color: var(--green-fg); }
+.red { background: var(--red-bg); color: var(--red-fg); }
+.chip { display: inline-block; font-size: 12px; padding: 0 7px; border-radius: 5px; background: var(--accent-soft); color: var(--accent); margin: 0 4px 2px 0; white-space: nowrap; }
+.chip.broken { background: var(--red-bg); color: var(--red-fg); }
+.chip.tag { background: var(--surface-2); color: var(--muted); }
+.chip:hover { text-decoration: none; filter: brightness(.95); }
+.muted { color: var(--muted); }
+.mono { font-family: ui-monospace, "Cascadia Code", Consolas, monospace; font-size: 12px; }
+
+.list > * { padding: 10px 14px; border-top: 1px solid var(--border); }
+.list > *:first-child { border-top: 0; }
+.row { display: flex; flex-wrap: wrap; gap: 6px 10px; align-items: baseline; }
+.row .grow { flex: 1; min-width: 200px; }
+.issue { padding: 8px 14px; border-top: 1px solid var(--border); }
+.issue:first-child { border-top: 0; }
+.issue .path { color: var(--muted); }
+
+.toolbar { display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center; margin-bottom: 14px; }
+.toolbar label { color: var(--muted); font-size: 12px; display: flex; gap: 6px; align-items: center; }
+.board { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 14px; align-items: start; }
+.col { background: var(--surface-2); border-radius: 8px; padding: 10px; min-height: 80px; }
+.col h3 { margin: 0 0 8px; font-size: 13px; display: flex; justify-content: space-between; }
+.col h4 { margin: 10px 0 6px; font-size: 11px; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); }
+.task-card { display: block; background: var(--surface); border: 1px solid var(--border); border-radius: 7px; padding: 9px 11px; margin-bottom: 8px; color: var(--text); box-shadow: var(--shadow); }
+.task-card:hover { text-decoration: none; border-color: var(--accent); }
+.task-card .t { font-weight: 550; margin: 2px 0 4px; }
+.task-card.high { border-left: 3px solid var(--amber-fg); }
+.progress { height: 6px; background: var(--grey-bg); border-radius: 4px; overflow: hidden; }
+.progress > i { display: block; height: 100%; background: var(--green-fg); }
+.banner { background: var(--amber-bg); color: var(--amber-fg); border-radius: 6px; padding: 6px 10px; margin: 8px 0; }
+
+.item-row { display: flex; flex-wrap: wrap; gap: 6px 10px; align-items: baseline; padding: 6px 0; border-top: 1px solid var(--border); }
+.item-row:first-child { border-top: 0; }
+.item-row .nm { flex: 1; min-width: 180px; }
+
+#backdrop { position: fixed; inset: 0; background: rgba(0,0,0,.35); z-index: 20; display: none; }
+#drawer { position: fixed; top: 0; right: 0; bottom: 0; width: min(760px, 100%); background: var(--bg); z-index: 21; display: none; flex-direction: column; box-shadow: -8px 0 24px rgba(0,0,0,.25); }
+body.drawer-open #backdrop { display: block; }
+body.drawer-open #drawer { display: flex; }
+#drawer .dhead { display: flex; justify-content: space-between; align-items: center; padding: 10px 16px; background: var(--surface); border-bottom: 1px solid var(--border); }
+#drawerBody { overflow: auto; padding: 16px 20px 40px; }
+.meta { display: grid; grid-template-columns: max-content 1fr; gap: 4px 14px; margin: 12px 0; }
+.meta dt { color: var(--muted); }
+.meta dd { margin: 0; }
+.md h3, .md h4, .md h5, .md h6, .md h2 { margin: 18px 0 6px; }
+.md h3 { font-size: 15px; border-bottom: 1px solid var(--border); padding-bottom: 3px; }
+.md p { margin: 6px 0; }
+.md ul, .md ol { margin: 6px 0; padding-left: 22px; }
+.md table { border-collapse: collapse; margin: 8px 0; display: block; overflow-x: auto; }
+.md th, .md td { border: 1px solid var(--border); padding: 4px 9px; text-align: left; vertical-align: top; }
+.md th { background: var(--surface-2); }
+.md blockquote { margin: 8px 0; padding: 2px 12px; border-left: 3px solid var(--border); color: var(--muted); }
+.md input[type=checkbox] { margin-right: 6px; }
+.md hr { border: 0; border-top: 1px solid var(--border); }
+.connect { max-width: 560px; margin: 60px auto; text-align: center; }
+.connect h1 { font-size: 22px; margin-bottom: 4px; }
+.connect p { color: var(--muted); }
+.perr { background: var(--red-bg); color: var(--red-fg); border-radius: 6px; padding: 8px 12px; margin: 10px 0; }
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="top-row">
+    <div class="brand" id="brand">Tracker</div>
+    <input type="search" id="filter" placeholder="Filter by id, title, tag, text…" size="30" aria-label="Filter">
+    <div class="spacer"></div>
+    <span class="status" id="status"></span>
+    <label class="status">Refresh
+      <select id="interval" aria-label="Refresh interval">
+        <option value="2000">2s</option><option value="5000">5s</option><option value="15000">15s</option><option value="60000">60s</option>
+      </select>
+    </label>
+    <button id="pause" type="button">Pause</button>
+    <button id="refreshNow" type="button">Refresh now</button>
+    <button id="change" type="button">Change folder</button>
+  </div>
+  <nav class="tabs" id="tabs"></nav>
+</header>
+<main id="view"></main>
+<div id="backdrop"></div>
+<aside id="drawer" aria-label="Details">
+  <div class="dhead"><span class="muted" id="drawerTitle"></span><button id="drawerClose" type="button">Close ✕</button></div>
+  <div id="drawerBody"></div>
+</aside>
+<noscript>This viewer needs JavaScript.</noscript>
+
+<script>
+'use strict';
+/* ===================================================================
+   Core (pure) - parsing, validation, model and reports. No DOM access.
+   Rules mirror claude-assets/skills/tracker/file-format.md.
+   =================================================================== */
+
+const TYPES = {
+  specs:     { type: 'spec',     prefix: 'SPEC', width: 3, statuses: ['draft', 'review', 'approved', 'superseded'] },
+  plans:     { type: 'plan',     prefix: 'PLAN', width: 3, statuses: ['draft', 'approved', 'in-progress', 'done', 'abandoned'] },
+  tasks:     { type: 'task',     prefix: 'TASK', width: 4, statuses: ['todo', 'in-progress', 'blocked', 'done', 'dropped'] },
+  decisions: { type: 'decision', prefix: 'D',    width: 3, statuses: ['proposed', 'accepted', 'superseded', 'rejected'] },
+  outcomes:  { type: 'outcome',  prefix: 'OUT',  width: 4, statuses: null }
+};
+const DIRS = Object.keys(TYPES);
+const OUTCOME_RESULTS = ['completed', 'partial', 'blocked', 'abandoned'];
+const PRIORITIES = ['low', 'normal', 'high'];
+const ARRAY_KEYS = ['implements', 'covers', 'blocked_by', 'tasks', 'follow_ups', 'tags', 'decisions', 'relates'];
+const REF_TYPE = { SPEC: 'spec', PLAN: 'plan', TASK: 'task', OUT: 'outcome', D: 'decision' };
+const STALE_DAYS = 7;
+
+/* ---------- YAML subset ---------- */
+
+function plainScalar(raw) {
+  const s = raw.trim();
+  if (s === '' || s === '~' || /^null$/i.test(s)) return null;
+  if (/^(true|false)$/i.test(s)) return s.toLowerCase() === 'true';
+  return s;
+}
+
+function readQuoted(s, start) {
+  const q = s[start];
+  let out = '';
+  let i = start + 1;
+  for (; i < s.length; i++) {
+    const ch = s[i];
+    if (q === '"' && ch === '\\') {
+      const n = s[++i];
+      if (n === undefined) break;
+      out += ({ n: '\n', t: '\t', '"': '"', '\\': '\\', '/': '/' })[n] ?? n;
+      continue;
+    }
+    if (q === "'" && ch === "'") {
+      if (s[i + 1] === "'") { out += "'"; i++; continue; }
+      return { value: out, end: i + 1 };
+    }
+    if (q === '"' && ch === '"') return { value: out, end: i + 1 };
+    out += ch;
+  }
+  throw new Error('unclosed quote');
+}
+
+function parseFlow(s) {
+  let i = 0;
+  const ws = () => { while (i < s.length && /\s/.test(s[i])) i++; };
+  function val() {
+    ws();
+    if (s[i] === '[') return seq();
+    if (s[i] === '{') return map();
+    if (s[i] === '"' || s[i] === "'") { const r = readQuoted(s, i); i = r.end; return r.value; }
+    let j = i;
+    while (j < s.length && !',]}'.includes(s[j])) j++;
+    const raw = s.slice(i, j);
+    i = j;
+    return plainScalar(raw);
+  }
+  function seq() {
+    i++;
+    const out = [];
+    ws();
+    if (s[i] === ']') { i++; return out; }
+    for (;;) {
+      out.push(val());
+      ws();
+      if (s[i] === ',') { i++; ws(); if (s[i] === ']') { i++; return out; } continue; }
+      if (s[i] === ']') { i++; return out; }
+      throw new Error('unterminated flow sequence');
+    }
+  }
+  function map() {
+    i++;
+    const o = {};
+    ws();
+    if (s[i] === '}') { i++; return o; }
+    for (;;) {
+      ws();
+      let key;
+      if (s[i] === '"' || s[i] === "'") { const r = readQuoted(s, i); i = r.end; key = r.value; }
+      else {
+        let j = i;
+        while (j < s.length && s[j] !== ':' && s[j] !== ',' && s[j] !== '}') j++;
+        key = s.slice(i, j).trim();
+        i = j;
+      }
+      ws();
+      if (s[i] !== ':') throw new Error('unterminated flow mapping');
+      i++;
+      o[key] = val();
+      ws();
+      if (s[i] === ',') { i++; continue; }
+      if (s[i] === '}') { i++; return o; }
+      throw new Error('unterminated flow mapping');
+    }
+  }
+  const v = val();
+  ws();
+  if (i < s.length && s[i] !== '#') throw new Error('unexpected text after flow collection');
+  return v;
+}
+
+function parseScalar(raw) {
+  const s = raw.trim();
+  if (s[0] === '"' || s[0] === "'") {
+    const r = readQuoted(s, 0);
+    const rest = s.slice(r.end).trim();
+    if (rest && rest[0] !== '#') throw new Error('unexpected text after quoted string');
+    return r.value;
+  }
+  if (s[0] === '[' || s[0] === '{') return parseFlow(s);
+  return plainScalar(s.replace(/\s#.*$/, ''));
+}
+
+function dedent(lines) {
+  const real = lines.filter(l => l.trim() !== '');
+  if (!real.length) return lines.map(() => '');
+  const min = Math.min(...real.map(l => l.match(/^[ \t]*/)[0].length));
+  return lines.map(l => l.slice(Math.min(min, l.match(/^[ \t]*/)[0].length)));
+}
+
+function parseYaml(text) {
+  const lines = text.replace(/\r\n?/g, '\n').split('\n');
+  const out = {};
+  const isBlank = l => /^\s*(#.*)?$/.test(l);
+  let i = 0;
+  while (i < lines.length) {
+    const line = lines[i];
+    if (isBlank(line)) { i++; continue; }
+    if (line[0] === ' ' || line[0] === '\t') throw new Error('unexpected indentation at line ' + (i + 1));
+    const m = /^([A-Za-z0-9_][A-Za-z0-9_.-]*):(?:[ \t]+(.*))?$/.exec(line);
+    if (!m) throw new Error('invalid line ' + (i + 1) + ': ' + line.slice(0, 40));
+    const key = m[1];
+    let rest = (m[2] || '').trim();
+    i++;
+    if (rest === '' || rest[0] === '#') {
+      const block = [];
+      while (i < lines.length && (isBlank(lines[i]) || /^[ \t]/.test(lines[i]) || /^-(\s|$)/.test(lines[i]))) block.push(lines[i++]);
+      out[key] = parseBlock(block);
+    } else if (/^[|>][+-]?\s*(#.*)?$/.test(rest)) {
+      const block = [];
+      while (i < lines.length && (lines[i].trim() === '' || /^[ \t]/.test(lines[i]))) block.push(lines[i++]);
+      const body = dedent(block);
+      while (body.length && body[body.length - 1] === '') body.pop();
+      const folded = rest[0] === '>';
+      let txt = folded ? body.join('\n').replace(/([^\n])\n(?=[^\n])/g, '$1 ') : body.join('\n');
+      if (!rest.includes('-')) txt += '\n';
+      out[key] = txt;
+    } else if (rest[0] === '[' || rest[0] === '{') {
+      for (;;) {
+        try { out[key] = parseScalar(rest); break; }
+        catch (e) {
+          if (/unterminated/.test(e.message) && i < lines.length) rest += ' ' + lines[i++].trim();
+          else throw e;
+        }
+      }
+    } else if (rest[0] === '"' || rest[0] === "'") {
+      out[key] = parseScalar(rest);
+    } else {
+      while (i < lines.length && /^[ \t]+\S/.test(lines[i]) && !/^[ \t]*#/.test(lines[i])) rest += ' ' + lines[i++].trim();
+      out[key] = parseScalar(rest);
+    }
+  }
+  return out;
+}
+
+function parseBlock(block) {
+  const real = block.filter(l => l.trim() !== '' && !/^\s*#/.test(l));
+  if (!real.length) return null;
+  if (/^\s*-(\s|$)/.test(real[0])) return parseList(block);
+  return parseYaml(dedent(block).join('\n'));
+}
+
+function parseList(block) {
+  const items = [];
+  const baseIndent = block.find(l => /^\s*-(\s|$)/.test(l)).match(/^\s*/)[0].length;
+  let cur = null;
+  const flush = () => { if (cur) { items.push(listItem(cur)); cur = null; } };
+  for (const l of block) {
+    if (l.trim() === '' || /^\s*#/.test(l)) continue;
+    const m = /^(\s*)-(?:(\s+)(.*))?$/.exec(l);
+    if (m && m[1].length === baseIndent) {
+      flush();
+      cur = { text: (m[3] || '').trim(), col: m[1].length + 1 + (m[2] || '').length, cont: [] };
+    } else if (cur) cur.cont.push(l);
+    else throw new Error('unexpected content in list');
+  }
+  flush();
+  return items;
+}
+
+function listItem(it) {
+  const { text, col, cont } = it;
+  if (text === '') return parseBlock(cont);
+  if (/^[A-Za-z0-9_][A-Za-z0-9_.-]*:(\s|$)/.test(text)) {
+    return parseYaml([text, ...cont.map(l => l.slice(Math.min(col, l.match(/^[ \t]*/)[0].length)))].join('\n'));
+  }
+  return parseScalar(text + (cont.length ? ' ' + cont.map(l => l.trim()).join(' ') : ''));
+}
+
+/* ---------- Artifacts ---------- */
+
+function splitFrontmatter(text) {
+  const t = text.replace(/^\uFEFF/, '').replace(/\r\n?/g, '\n');
+  const lines = t.split('\n');
+  if (lines[0].trim() !== '---') return { missing: true, body: t };
+  for (let i = 1; i < lines.length; i++) {
+    if (/^(---|\.\.\.)\s*$/.test(lines[i])) return { yaml: lines.slice(1, i).join('\n'), body: lines.slice(i + 1).join('\n') };
+  }
+  return { unclosed: true, body: t };
+}
+
+function refInfo(ref) {
+  const m = /^(SPEC|PLAN|TASK|OUT|D)-(\d+)(?:\.(\d+))?$/.exec(String(ref).trim());
+  if (!m) return null;
+  return { id: m[1] + '-' + m[2], prefix: m[1], type: REF_TYPE[m[1]], item: m[3] ? Number(m[3]) : null };
+}
+
+const DATE_RE = /^\d{4}-\d{2}-\d{2}([T ]\d{2}:\d{2}(:\d{2}(\.\d+)?)?(Z|[+-]\d{2}:?\d{2})?)?$/;
+const idMatcher = (prefix, w) => new RegExp('^' + prefix + '-\\d{' + w + ',}$');
+
+function validate(type, fm, T) {
+  const errs = [];
+  const str = (k, req) => {
+    if (fm[k] == null) { if (req) errs.push(k + ': required'); return; }
+    if (typeof fm[k] !== 'string' || fm[k].trim() === '') errs.push(k + ': must be a non-empty string');
+  };
+  const date = (k, req) => {
+    if (fm[k] == null) { if (req) errs.push(k + ': required'); return; }
+    if (typeof fm[k] !== 'string' || !DATE_RE.test(fm[k])) errs.push(k + ': not an ISO date');
+  };
+  const enumOf = (k, vals, req) => {
+    if (fm[k] == null) { if (req) errs.push(k + ': required'); return; }
+    if (!vals.includes(fm[k])) errs.push(k + ': must be one of ' + vals.join(' | '));
+  };
+  const refs = (k, test, label) => {
+    for (const v of (fm[k] || [])) if (typeof v !== 'string' || !test(v.trim())) errs.push(k + ': "' + v + '" is not ' + label);
+  };
+  const isId = (prefix, w) => v => idMatcher(prefix, w).test(v);
+  str('title', true);
+  if (type === 'outcome') {
+    date('date', true);
+    enumOf('result', OUTCOME_RESULTS, true);
+    refs('tasks', isId('TASK', 4), 'a TASK id');
+  } else {
+    enumOf('status', T.statuses, true);
+    date('created'); date('updated');
+  }
+  if (type === 'spec') {
+    if (fm.superseded_by != null && !isId('SPEC', 3)(String(fm.superseded_by))) errs.push('superseded_by: not a SPEC id');
+  }
+  if (type === 'plan') refs('implements', isId('SPEC', 3), 'a SPEC id');
+  if (type === 'task') {
+    if (fm.plan != null && !isId('PLAN', 3)(String(fm.plan))) errs.push('plan: not a PLAN id');
+    refs('covers', v => { const r = refInfo(v); return r && r.type === 'spec'; }, 'a SPEC id or item ref');
+    refs('decisions', isId('D', 3), 'a decision id');
+    enumOf('priority', PRIORITIES, false);
+  }
+  if (type === 'decision') {
+    date('date');
+    refs('relates', v => !!refInfo(v), 'an artifact id');
+    if (fm.superseded_by != null && !isId('D', 3)(String(fm.superseded_by))) errs.push('superseded_by: not a decision id');
+  }
+  return errs;
+}
+
+function buildArtifact(dir, name, text, mtime) {
+  const T = TYPES[dir];
+  const a = { type: T.type, dir, name, path: dir + '/' + name, mtime: mtime || 0, id: null, hasFileId: false, fm: {}, body: '', parseError: null, acceptance: [] };
+  const m = /^(SPEC|PLAN|TASK|OUT|D)-(\d+)/.exec(name);
+  if (m && m[1] === T.prefix && m[2].length >= T.width) { a.id = m[1] + '-' + m[2]; a.hasFileId = true; }
+  else a.id = name.replace(/\.md$/i, '');
+
+  const sp = splitFrontmatter(text);
+  a.body = sp.body;
+  const errs = [];
+  if (sp.missing) errs.push('missing frontmatter');
+  else if (sp.unclosed) errs.push('frontmatter is not closed with ---');
+  else {
+    let fm;
+    try { fm = parseYaml(sp.yaml); }
+    catch (e) { a.parseError = 'invalid YAML frontmatter: ' + e.message; fm = null; }
+    if (fm) {
+      for (const k of Object.keys(fm)) if (fm[k] == null) delete fm[k];
+      for (const k of ARRAY_KEYS) if (k in fm && !Array.isArray(fm[k])) fm[k] = [fm[k]];
+      a.fm = fm;
+    }
+  }
+  if (!a.parseError) {
+    if (errs.length === 0) {
+      if (!a.hasFileId) errs.push('filename has no valid ' + T.prefix + ' id (expected ' + T.prefix + '-' + '0'.repeat(T.width - 1) + '1-slug.md)');
+      else if (a.fm.id != null && a.fm.id !== a.id) errs.push('frontmatter id "' + a.fm.id + '" does not match filename id "' + a.id + '"');
+      else if (a.fm.id == null) errs.push('id: required');
+      errs.push(...validate(a.type, a.fm, T));
+    }
+    if (errs.length) a.parseError = errs.join('; ');
+  }
+  if (a.type === 'spec') a.items = parseSpecItems(a.body);
+  if (a.type === 'task') a.acceptance = parseAcceptance(a.body);
+  a.search = [a.id, a.fm.title, (a.fm.tags || []).join(' '), a.body].join(' ').toLowerCase();
+  return a;
+}
+
+function inFence(line, state) {
+  if (/^\s*(```|~~~)/.test(line)) { state.on = !state.on; return true; }
+  return state.on;
+}
+
+function parseSpecItems(body) {
+  const items = [];
+  const st = { on: false };
+  let inReq = false;
+  for (const line of body.split('\n')) {
+    if (inFence(line, st)) continue;
+    if (/^##\s+Requirements\s*$/i.test(line)) { inReq = true; continue; }
+    if (/^#{1,2}\s+/.test(line)) { inReq = false; continue; }
+    if (!inReq) continue;
+    const m = /^###\s+(\d+)\.\s+(.*\S)\s*$/.exec(line);
+    if (m) {
+      let title = m[2];
+      const w = /\(withdrawn\)\s*$/i.test(title);
+      if (w) title = title.replace(/\s*\(withdrawn\)\s*$/i, '');
+      items.push({ no: Number(m[1]), title, withdrawn: w });
+    }
+  }
+  return items;
+}
+
+function parseAcceptance(body) {
+  const out = [];
+  const st = { on: false };
+  let inAcc = false;
+  for (const line of body.split('\n')) {
+    if (inFence(line, st)) continue;
+    if (/^##\s+Acceptance\s*$/i.test(line)) { inAcc = true; continue; }
+    if (/^#{1,2}\s+/.test(line)) { inAcc = false; continue; }
+    if (!inAcc) continue;
+    const m = /^\s*[-*]\s+\[([ xX])\]\s+(.*\S)\s*$/.exec(line);
+    if (m) out.push({ index: out.length, done: m[1] !== ' ', text: m[2] });
+  }
+  return out;
+}
+
+/* ---------- Model and reports ---------- */
+
+function linksOf(a) {
+  const f = a.fm, L = [];
+  const add = (rel, v) => { v = String(v).trim(); if (v) L.push({ from: a.id, to: v, rel }); };
+  if (a.type === 'plan') (f.implements || []).forEach(v => add('implements', v));
+  if (a.type === 'task') {
+    if (f.plan) add('plan', f.plan);
+    (f.covers || []).forEach(v => add('covers', v));
+    (f.blocked_by || []).forEach(v => { if (/^TASK-\d+$/.test(String(v).trim())) add('blocked_by', v); });
+    (f.decisions || []).forEach(v => add('decisions', v));
+  }
+  if (a.type === 'decision') (f.relates || []).forEach(v => add('relates', v));
+  if (a.type === 'outcome') {
+    (f.tasks || []).forEach(v => add('tasks', v));
+    if (f.corrects) add('corrects', f.corrects);
+  }
+  return L;
+}
+
+function parseDate(s) {
+  if (!s) return null;
+  const d = new Date(s);
+  return isNaN(d) ? null : d;
+}
+
+function buildModel(arts, now) {
+  now = now || new Date();
+  const sorted = [...arts].sort((a, b) => (a.path < b.path ? -1 : a.path > b.path ? 1 : 0));
+  const groups = new Map();
+  for (const a of sorted) {
+    if (!groups.has(a.id)) groups.set(a.id, []);
+    groups.get(a.id).push(a);
+  }
+  const byId = new Map();
+  const collisions = [];
+  for (const [id, list] of groups) {
+    byId.set(id, list[0]);
+    if (list.length > 1) collisions.push({ id, paths: list.map(a => a.path) });
+  }
+  const ok = a => !a.parseError;
+  const idCmp = (a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0);
+  const ofType = t => sorted.filter(a => a.type === t).sort(idCmp);
+  const specs = ofType('spec'), plans = ofType('plan'), tasks = ofType('task'), decisions = ofType('decision'), outcomes = ofType('outcome');
+  const cleanTasks = tasks.filter(ok);
+
+  // links
+  const links = [];
+  for (const a of sorted) for (const l of linksOf(a)) {
+    const ri = refInfo(l.to);
+    links.push({ ...l, valid: !!(ri && byId.has(ri.id)) });
+  }
+  const brokenLinks = links.filter(l => !l.valid).sort((a, b) => (a.from + a.to < b.from + b.to ? -1 : 1));
+
+  // coverage
+  const coverers = new Map();
+  for (const t of cleanTasks) for (const c of (t.fm.covers || [])) {
+    const r = refInfo(c);
+    if (!r || r.type !== 'spec' || r.item == null) continue;
+    const key = r.id + '.' + r.item;
+    if (!coverers.has(key)) coverers.set(key, new Map());
+    coverers.get(key).set(t.id, t);
+  }
+  const coverage = specs.map(s => ({
+    spec: s,
+    items: (s.items || []).map(it => {
+      const ts = [...(coverers.get(s.id + '.' + it.no)?.values() || [])].sort(idCmp);
+      const state = it.withdrawn ? 'withdrawn' : ts.length === 0 ? 'uncovered' : ts.some(t => t.fm.status === 'done') ? 'done' : 'covered';
+      return { ...it, tasks: ts, state };
+    })
+  }));
+
+  // plans
+  const tasksByPlan = new Map();
+  for (const t of cleanTasks) if (t.fm.plan) {
+    if (!tasksByPlan.has(t.fm.plan)) tasksByPlan.set(t.fm.plan, []);
+    tasksByPlan.get(t.fm.plan).push(t);
+  }
+  const planInfo = new Map();
+  for (const p of plans) {
+    const ts = tasksByPlan.get(p.id) || [];
+    const done = ts.filter(t => t.fm.status === 'done').length;
+    planInfo.set(p.id, { tasks: ts, done, total: ts.length, needsClosing: ts.length > 0 && done === ts.length && p.fm.status === 'in-progress' });
+  }
+
+  // drift
+  const uncovered = [];
+  for (const c of coverage) if (c.spec.fm.status === 'approved' && !c.spec.parseError)
+    for (const it of c.items) if (it.state === 'uncovered') uncovered.push({ spec: c.spec, item: it });
+  const staleCut = now.getTime() - STALE_DAYS * 86400000;
+  const stale = cleanTasks.filter(t => {
+    if (t.fm.status !== 'in-progress') return false;
+    const d = parseDate(t.fm.updated) || parseDate(t.fm.created);
+    return d && d.getTime() < staleCut;
+  });
+  const closing = plans.filter(p => ok(p) && ['in-progress', 'approved'].includes(p.fm.status) && planInfo.get(p.id).total > 0 && planInfo.get(p.id).done === planInfo.get(p.id).total);
+
+  const parseErrors = sorted.filter(a => a.parseError).map(a => ({ id: a.id, type: a.type, path: a.path, error: a.parseError }));
+  const counts = { open: 0, todo: 0, 'in-progress': 0, blocked: 0, done: 0, dropped: 0 };
+  for (const t of cleanTasks) { counts[t.fm.status]++; if (t.fm.status === 'todo' || t.fm.status === 'in-progress') counts.open++; }
+  const attention = parseErrors.length + brokenLinks.length + collisions.length;
+  const lastActivity = sorted.reduce((m, a) => Math.max(m, a.mtime || 0), 0);
+
+  return { arts: sorted, byId, specs, plans, tasks, decisions, outcomes, coverage, planInfo, links, brokenLinks, collisions, parseErrors,
+           drift: { uncovered, stale, closing }, counts, attention, lastActivity, tasksByPlan };
+}
+
+/* ---------- Markdown (small, escaping, no raw HTML) ---------- */
+
+function esc(s) {
+  return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+
+function stripComments(src) {
+  const st = { on: false };
+  const out = [];
+  let inComment = false;
+  for (let line of src.split('\n')) {
+    if (!inComment && inFence(line, st)) { out.push(line); continue; }
+    if (st.on) { out.push(line); continue; }
+    let result = '';
+    while (line.length) {
+      if (inComment) {
+        const e = line.indexOf('-->');
+        if (e < 0) { line = ''; break; }
+        line = line.slice(e + 3); inComment = false;
+      } else {
+        const s = line.indexOf('<!--');
+        if (s < 0) { result += line; line = ''; break; }
+        result += line.slice(0, s);
+        line = line.slice(s + 4); inComment = true;
+      }
+    }
+    if (!inComment || result.trim() !== '') out.push(result);
+  }
+  return out.join('\n');
+}
+
+function mdInline(t, linkFor) {
+  const codes = [], keep = [];
+  t = t.replace(/`([^`]+)`/g, (_, c) => { codes.push(c); return '\u0000' + (codes.length - 1) + '\u0000'; });
+  t = esc(t);
+  t = t.replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g, (_, txt, url) => {
+    keep.push('<a href="' + url + '" target="_blank" rel="noopener noreferrer">' + txt + '</a>');
+    return '\u0001' + (keep.length - 1) + '\u0001';
+  });
+  if (linkFor) {
+    t = t.replace(/\b(SPEC-\d{3,}(?:\.\d+)?|PLAN-\d{3,}|TASK-\d{4,}|D-\d{3,}|OUT-\d{4,})\b/g, (m) => {
+      const href = linkFor(m);
+      if (!href) return m;
+      keep.push('<a href="' + href + '">' + m + '</a>');
+      return '\u0001' + (keep.length - 1) + '\u0001';
+    });
+  }
+  t = t.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+       .replace(/(^|[^*\w])\*(?!\s)([^*]+?)\*(?!\w)/g, '$1<em>$2</em>')
+       .replace(/~~(.+?)~~/g, '<del>$1</del>');
+  t = t.replace(/\u0001(\d+)\u0001/g, (_, n) => keep[n]);
+  t = t.replace(/\u0000(\d+)\u0000/g, (_, n) => '<code>' + esc(codes[n]) + '</code>');
+  return t;
+}
+
+function mdToHtml(src, linkFor) {
+  const lines = stripComments(src.replace(/\r\n?/g, '\n')).split('\n');
+  const out = [];
+  const inl = t => mdInline(t, linkFor);
+  const isTableSep = l => /^\s*\|?\s*:?-{2,}:?\s*(\|\s*:?-{2,}:?\s*)*\|?\s*$/.test(l) && l.includes('-');
+  const cells = l => l.trim().replace(/^\|/, '').replace(/\|$/, '').split('|').map(c => c.trim());
+  const blockStart = l => /^\s*(```|~~~)/.test(l) || /^#{1,6}\s/.test(l) || /^\s*>/.test(l) || /^\s*([-*+]|\d+[.)])\s+/.test(l);
+  let i = 0;
+  while (i < lines.length) {
+    const line = lines[i];
+    if (/^\s*$/.test(line)) { i++; continue; }
+    let m;
+    if ((m = /^\s*(```|~~~)/.exec(line))) {
+      const fence = m[1], buf = [];
+      i++;
+      while (i < lines.length && !lines[i].trim().startsWith(fence)) buf.push(lines[i++]);
+      i++;
+      out.push('<pre><code>' + esc(buf.join('\n')) + '</code></pre>');
+      continue;
+    }
+    if ((m = /^(#{1,6})\s+(.*?)\s*#*\s*$/.exec(line))) {
+      const n = Math.min(m[1].length + 1, 6);
+      out.push('<h' + n + '>' + inl(m[2]) + '</h' + n + '>');
+      i++; continue;
+    }
+    if (/^\s{0,3}([-*_])(\s*\1){2,}\s*$/.test(line)) { out.push('<hr>'); i++; continue; }
+    if (line.includes('|') && i + 1 < lines.length && isTableSep(lines[i + 1])) {
+      const head = cells(line);
+      i += 2;
+      const rows = [];
+      while (i < lines.length && lines[i].includes('|') && !/^\s*$/.test(lines[i])) rows.push(cells(lines[i++]));
+      out.push('<table><thead><tr>' + head.map(c => '<th>' + inl(c) + '</th>').join('') + '</tr></thead><tbody>' +
+        rows.map(r => '<tr>' + r.map(c => '<td>' + inl(c) + '</td>').join('') + '</tr>').join('') + '</tbody></table>');
+      continue;
+    }
+    if (/^\s*>/.test(line)) {
+      const buf = [];
+      while (i < lines.length && /^\s*>/.test(lines[i])) buf.push(lines[i++].replace(/^\s*>\s?/, ''));
+      out.push('<blockquote>' + mdToHtml(buf.join('\n'), linkFor) + '</blockquote>');
+      continue;
+    }
+    if (/^\s*([-*+]|\d+[.)])\s+/.test(line)) {
+      const items = [];
+      while (i < lines.length) {
+        const l = lines[i];
+        const lm = /^(\s*)([-*+]|\d+[.)])\s+(.*)$/.exec(l);
+        if (lm) { items.push({ indent: lm[1].length, ordered: /\d/.test(lm[2]), text: lm[3] }); i++; }
+        else if (/^\s*$/.test(l)) {
+          if (i + 1 < lines.length && /^\s*([-*+]|\d+[.)])\s+/.test(lines[i + 1])) i++; else break;
+        }
+        else if (/^\s+\S/.test(l) && items.length && !blockStart(l)) { items[items.length - 1].text += ' ' + l.trim(); i++; }
+        else break;
+      }
+      out.push(renderList(items, inl));
+      continue;
+    }
+    const buf = [line];
+    i++;
+    while (i < lines.length && !/^\s*$/.test(lines[i]) && !blockStart(lines[i]) && !/^\s{0,3}([-*_])(\s*\1){2,}\s*$/.test(lines[i])) buf.push(lines[i++]);
+    out.push('<p>' + inl(buf.join(' ')) + '</p>');
+  }
+  return out.join('\n');
+}
+
+function renderList(items, inl) {
+  let html = '';
+  const stack = [];
+  for (const it of items) {
+    while (stack.length && it.indent < stack[stack.length - 1].indent) html += '</li></' + (stack.pop().ordered ? 'ol' : 'ul') + '>';
+    const top = stack[stack.length - 1];
+    if (!top || it.indent > top.indent) { html += '<' + (it.ordered ? 'ol' : 'ul') + '>'; stack.push({ indent: it.indent, ordered: it.ordered }); }
+    else if (top.ordered !== it.ordered) { html += '</li></' + (top.ordered ? 'ol' : 'ul') + '><' + (it.ordered ? 'ol' : 'ul') + '>'; top.ordered = it.ordered; }
+    else html += '</li>';
+    let text = it.text, box = '';
+    const tm = /^\[([ xX])\]\s+(.*)$/.exec(text);
+    if (tm) { box = '<input type="checkbox" disabled' + (tm[1] !== ' ' ? ' checked' : '') + '>'; text = tm[2]; }
+    html += '<li>' + box + inl(text);
+  }
+  while (stack.length) html += '</li></' + (stack.pop().ordered ? 'ol' : 'ul') + '>';
+  return html;
+}
+
+/* ===================================================================
+   Browser app
+   =================================================================== */
+
+function boot() {
+  const $ = (s, el) => (el || document).querySelector(s);
+  const TABS = ['overview', 'board', 'specs', 'plans', 'decisions', 'outcomes'];
+  const TAB_LABEL = { overview: 'Overview', board: 'Board', specs: 'Specs', plans: 'Plans', decisions: 'Decisions', outcomes: 'Legacy outcomes' };
+  const STATUS_CLASS = {
+    todo: 'grey', draft: 'grey', proposed: 'grey', unknown: 'grey',
+    'in-progress': 'blue', review: 'blue', covered: 'blue',
+    blocked: 'amber', uncovered: 'amber',
+    done: 'green', approved: 'green', accepted: 'green', completed: 'green', recorded: 'green',
+    dropped: 'red', abandoned: 'red', superseded: 'red', rejected: 'red', partial: 'red', withdrawn: 'red'
+  };
+
+  const S = {
+    handle: null, root: null, cache: new Map(), project: null, model: null,
+    filter: '', interval: 5000, paused: false, timer: null, busy: false,
+    lastRefresh: null, error: null, needsReconnect: false, unsupported: !window.showDirectoryPicker,
+    board: { plan: '', spec: '', tag: '', group: false, dropped: false }
+  };
+  try {
+    const saved = JSON.parse(localStorage.getItem('tracker-viewer') || '{}');
+    if (saved.interval) S.interval = saved.interval;
+    if (saved.paused) S.paused = true;
+  } catch (e) { /* storage unavailable */ }
+  const saveSettings = () => { try { localStorage.setItem('tracker-viewer', JSON.stringify({ interval: S.interval, paused: S.paused })); } catch (e) { /* ignore */ } };
+
+  /* ----- DOM helper ----- */
+  function h(tag, attrs, ...kids) {
+    const el = document.createElement(tag);
+    if (attrs) for (const [k, v] of Object.entries(attrs)) {
+      if (v == null || v === false) continue;
+      if (k === 'class') el.className = v;
+      else if (k === 'html') el.innerHTML = v;
+      else if (k.startsWith('on')) el.addEventListener(k.slice(2), v);
+      else el.setAttribute(k, v === true ? '' : v);
+    }
+    for (const kid of kids.flat(Infinity)) {
+      if (kid == null || kid === false) continue;
+      el.append(kid.nodeType ? kid : document.createTextNode(String(kid)));
+    }
+    return el;
+  }
+
+  /* ----- IndexedDB handle persistence ----- */
+  function idb() {
+    return new Promise((res, rej) => {
+      const r = indexedDB.open('tracker-viewer', 1);
+      r.onupgradeneeded = () => r.result.createObjectStore('kv');
+      r.onsuccess = () => res(r.result);
+      r.onerror = () => rej(r.error);
+    });
+  }
+  async function idbGet(k) {
+    try { const db = await idb(); return await new Promise((res, rej) => { const q = db.transaction('kv').objectStore('kv').get(k); q.onsuccess = () => res(q.result); q.onerror = () => rej(q.error); }); }
+    catch (e) { return undefined; }
+  }
+  async function idbSet(k, v) {
+    try { const db = await idb(); await new Promise((res, rej) => { const tx = db.transaction('kv', 'readwrite'); tx.objectStore('kv').put(v, k); tx.oncomplete = res; tx.onerror = () => rej(tx.error); }); }
+    catch (e) { /* persistence is best-effort */ }
+  }
+
+  /* ----- Folder access and scanning ----- */
+  async function resolveRoot(handle) {
+    try { return await handle.getDirectoryHandle('.tracker'); }
+    catch (e) { if (e.name !== 'NotFoundError' && e.name !== 'TypeMismatchError') throw e; }
+    for (const d of DIRS) {
+      try { await handle.getDirectoryHandle(d); return handle; } catch (e) { /* try next */ }
+    }
+    try { await handle.getFileHandle('project.yaml'); return handle; } catch (e) { /* none */ }
+    throw new Error('No .tracker folder found in "' + handle.name + '". Pick the project folder or its .tracker folder.');
+  }
+
+  async function scan(root) {
+    const seen = new Set();
+    let changed = false;
+    for (const dir of DIRS) {
+      let dh;
+      try { dh = await root.getDirectoryHandle(dir); }
+      catch (e) { if (e.name === 'NotFoundError' || e.name === 'TypeMismatchError') continue; throw e; }
+      for await (const entry of dh.values()) {
+        if (entry.kind !== 'file' || !entry.name.toLowerCase().endsWith('.md')) continue;
+        const path = dir + '/' + entry.name;
+        seen.add(path);
+        const f = await entry.getFile();
+        const c = S.cache.get(path);
+        if (c && c.mtime === f.lastModified && c.size === f.size) continue;
+        const text = await f.text();
+        S.cache.set(path, { mtime: f.lastModified, size: f.size, art: buildArtifact(dir, entry.name, text, f.lastModified) });
+        changed = true;
+      }
+    }
+    for (const k of [...S.cache.keys()]) if (!seen.has(k)) { S.cache.delete(k); changed = true; }
+    try {
+      const f = await (await root.getFileHandle('project.yaml')).getFile();
+      if (!S.projectStamp || S.projectStamp !== f.lastModified + ':' + f.size) {
+        S.projectStamp = f.lastModified + ':' + f.size;
+        try { S.project = parseYaml((await f.text()).replace(/^\uFEFF/, '')); } catch (e) { S.project = { name: null, error: e.message }; }
+        changed = true;
+      }
+    } catch (e) {
+      if (e.name !== 'NotFoundError') throw e;
+      if (S.project) { S.project = null; S.projectStamp = null; changed = true; }
+    }
+    return changed;
+  }
+
+  async function refresh(force) {
+    if (S.busy || !S.handle) return;
+    S.busy = true;
+    const before = S.error && S.error.message;
+    let changed = false;
+    try {
+      if (!S.root) S.root = await resolveRoot(S.handle);
+      changed = await scan(S.root);
+      if (changed || force || !S.model) S.model = buildModel([...S.cache.values()].map(c => c.art), new Date());
+      S.lastRefresh = new Date();
+      S.error = null;
+      S.needsReconnect = false;
+    } catch (e) {
+      S.error = e;
+      S.root = null;
+      if (e.name === 'NotAllowedError' || e.name === 'SecurityError') S.needsReconnect = true;
+    } finally { S.busy = false; }
+    if (changed || force || before !== (S.error && S.error.message)) render(); else renderStatus();
+  }
+
+  function schedule() {
+    clearTimeout(S.timer);
+    if (S.paused || !S.handle || S.needsReconnect) return;
+    S.timer = setTimeout(async () => { if (!document.hidden) await refresh(); schedule(); }, S.interval);
+  }
+
+  async function useHandle(handle, persist) {
+    S.handle = handle; S.root = null; S.cache.clear(); S.model = null; S.project = null; S.projectStamp = null; S.error = null;
+    if (persist) await idbSet('handle', handle);
+    await refresh(true);
+    schedule();
+  }
+
+  async function pickFolder() {
+    try { await useHandle(await window.showDirectoryPicker({ id: 'tracker-viewer', mode: 'read' }), true); }
+    catch (e) { if (e.name !== 'AbortError') { S.error = e; render(); } }
+  }
+
+  async function reconnect() {
+    try {
+      const p = await S.handle.requestPermission({ mode: 'read' });
+      if (p === 'granted') { S.needsReconnect = false; await refresh(true); schedule(); }
+    } catch (e) { S.error = e; render(); }
+  }
+
+  /* ----- Routing ----- */
+  function route() {
+    const parts = location.hash.replace(/^#\/?/, '').split('/').filter(Boolean).map(decodeURIComponent);
+    const tab = TABS.includes(parts[0]) ? parts[0] : 'overview';
+    const detail = parts.length >= 3 ? { type: parts[1], id: parts[2] } : null;
+    return { tab, detail };
+  }
+  const hrefFor = (type, id) => '#/' + route().tab + '/' + type + '/' + encodeURIComponent(id);
+  const tabHref = tab => '#/' + tab;
+
+  /* ----- Small components ----- */
+  const badge = (text, cls) => h('span', { class: 'badge ' + (cls || STATUS_CLASS[text] || 'grey') }, text);
+  const matches = a => !S.filter || a.search.includes(S.filter.toLowerCase());
+
+  function chip(ref) {
+    const ri = refInfo(ref);
+    const m = S.model;
+    if (!ri) return h('span', { class: 'chip tag' }, String(ref));
+    const found = m && m.byId.has(ri.id);
+    const label = ri.item != null ? ri.id + '.' + ri.item : ri.id;
+    if (!found) return h('span', { class: 'chip broken', title: 'Not found in this project' }, label);
+    const t = m.byId.get(ri.id);
+    return h('a', { class: 'chip', href: hrefFor(ri.type, ri.id), title: t.fm.title || '' }, label);
+  }
+  const chips = list => (list || []).map(r => chip(r));
+  const tagChips = list => (list || []).map(t => h('span', { class: 'chip tag' }, t));
+  function progress(done, total) {
+    return h('div', { class: 'progress', title: done + ' of ' + total }, h('i', { style: 'width:' + (total ? Math.round(done / total * 100) : 0) + '%' }));
+  }
+  const fmtDate = d => (d ? new Date(d).toLocaleString() : '—');
+  function linkFor(ref) {
+    const ri = refInfo(ref);
+    return ri && S.model && S.model.byId.has(ri.id) ? hrefFor(ri.type, ri.id) : null;
+  }
+  const mdNode = body => h('div', { class: 'md', html: mdToHtml(body || '', linkFor) });
+  const section = (title, ...kids) => [h('h2', { class: 'section' }, title), ...kids];
+
+  /* ----- Views ----- */
+  function issueList(rows) { return h('div', { class: 'card' }, rows); }
+
+  function viewOverview(m) {
+    const frag = [];
+    const tile = (n, l) => h('div', { class: 'card tile' }, h('div', { class: 'n' }, n), h('div', { class: 'l' }, l));
+    frag.push(h('div', { class: 'tiles' },
+      tile(m.counts.open, 'Open tasks'), tile(m.counts['in-progress'], 'In progress'), tile(m.counts.blocked, 'Blocked'),
+      tile(m.counts.done, 'Done'), tile(m.specs.length, 'Specs'), tile(m.plans.length, 'Plans'), tile(m.decisions.length, 'Decisions')));
+
+    const att = [];
+    for (const e of m.parseErrors) att.push(h('div', { class: 'issue' }, badge('parse error', 'red'), ' ', h('span', { class: 'mono' }, e.path), h('div', { class: 'path' }, e.error)));
+    for (const c of m.collisions) att.push(h('div', { class: 'issue' }, badge('ID collision', 'red'), ' ', h('b', null, c.id), h('div', { class: 'path mono' }, c.paths.join('  ·  '))));
+    for (const l of m.brokenLinks) att.push(h('div', { class: 'issue' }, badge('broken link', 'amber'), ' ', h('b', null, l.from), ' → ', l.to, h('span', { class: 'muted' }, ' (' + l.rel + ')')));
+    frag.push(...section('Needs attention', att.length ? issueList(att) : h('div', { class: 'allclear' }, 'All clear — no parse errors, collisions or broken links.')));
+
+    const d = m.drift, dr = [];
+    for (const u of d.uncovered) dr.push(h('div', { class: 'issue' }, badge('uncovered', 'amber'), ' ', chip(u.spec.id), ' item ', u.item.no, ': ', u.item.title));
+    for (const t of d.stale) dr.push(h('div', { class: 'issue' }, badge('stale', 'amber'), ' ', chip(t.id), ' ', t.fm.title, h('span', { class: 'muted' }, ' — in progress, last updated ' + (t.fm.updated || t.fm.created || '?'))));
+    for (const p of d.closing) dr.push(h('div', { class: 'issue' }, badge('close plan', 'blue'), ' ', chip(p.id), ' ', p.fm.title, h('span', { class: 'muted' }, ' — all linked tasks are done')));
+    frag.push(...section('Drift — what\'s missed', dr.length ? issueList(dr) : h('div', { class: 'allclear' }, 'All clear — approved spec items are covered and nothing looks stale.')));
+
+    const live = m.tasks.filter(t => !t.parseError && t.fm.status === 'in-progress').filter(matches);
+    if (live.length) frag.push(...section('In progress', h('div', { class: 'card list' }, live.map(t =>
+      h('div', { class: 'row' }, chip(t.id), h('span', { class: 'grow' }, t.fm.title), t.acceptance.length ? h('span', { class: 'muted' }, t.acceptance.filter(a => a.done).length + '/' + t.acceptance.length + ' checks') : null)))));
+    return frag;
+  }
+
+  function taskCard(t) {
+    const acc = t.acceptance, dn = acc.filter(a => a.done).length;
+    return h('a', { class: 'task-card' + (t.fm.priority === 'high' ? ' high' : ''), href: hrefFor('task', t.id) },
+      h('div', { class: 'row' }, h('span', { class: 'mono muted' }, t.id), t.fm.priority === 'high' ? badge('high', 'amber') : null),
+      h('div', { class: 't' }, t.fm.title),
+      h('div', null, t.fm.plan ? h('span', { class: 'chip' }, t.fm.plan) : null, (t.fm.covers || []).map(c => h('span', { class: 'chip' }, c)), tagChips(t.fm.tags)),
+      acc.length ? h('div', { style: 'margin-top:6px' }, progress(dn, acc.length)) : null);
+  }
+
+  function viewBoard(m) {
+    const clean = m.tasks.filter(t => !t.parseError);
+    const specSet = new Set(), tagSet = new Set();
+    for (const t of clean) {
+      for (const c of (t.fm.covers || [])) { const r = refInfo(c); if (r) specSet.add(r.id); }
+      for (const g of (t.fm.tags || [])) tagSet.add(g);
+    }
+    const sel = (key, label, opts) => h('label', null, label, h('select', { onchange: e => { S.board[key] = e.target.value; render(); } },
+      h('option', { value: '' }, 'All'), [...opts].sort().map(o => h('option', { value: o, selected: S.board[key] === o }, o))));
+    const check = (key, label) => h('label', null, h('input', { type: 'checkbox', checked: S.board[key], onchange: e => { S.board[key] = e.target.checked; render(); } }), label);
+    const frag = [h('div', { class: 'toolbar' },
+      sel('plan', 'Plan', m.plans.map(p => p.id)), sel('spec', 'Spec', specSet), sel('tag', 'Tag', tagSet),
+      check('group', 'Group by plan'), check('dropped', 'Show dropped'))];
+    if (m.parseErrors.some(e => e.type === 'task')) frag.push(h('div', { class: 'banner' }, m.parseErrors.filter(e => e.type === 'task').length + ' task file(s) could not be parsed and are not shown on the board — see Overview.'));
+    const b = S.board;
+    const shown = clean.filter(t => matches(t) &&
+      (!b.plan || t.fm.plan === b.plan) &&
+      (!b.spec || (t.fm.covers || []).some(c => { const r = refInfo(c); return r && r.id === b.spec; })) &&
+      (!b.tag || (t.fm.tags || []).includes(b.tag)));
+    const cols = ['todo', 'in-progress', 'blocked', 'done'];
+    if (b.dropped) cols.push('dropped');
+    frag.push(h('div', { class: 'board' }, cols.map(st => {
+      const ts = shown.filter(t => t.fm.status === st);
+      const body = [];
+      if (b.group) {
+        const groups = new Map();
+        for (const t of ts) { const k = t.fm.plan || '(no plan)'; if (!groups.has(k)) groups.set(k, []); groups.get(k).push(t); }
+        for (const [k, list] of groups) body.push(h('h4', null, k), list.map(taskCard));
+      } else body.push(ts.map(taskCard));
+      return h('div', { class: 'col' }, h('h3', null, h('span', null, st), h('span', { class: 'muted' }, ts.length)), body);
+    })));
+    return frag;
+  }
+
+  function itemRows(items) {
+    return items.map(it => h('div', { class: 'item-row' },
+      h('span', { class: 'mono muted' }, '§' + it.no), h('span', { class: 'nm' }, it.title), badge(it.state),
+      h('span', null, it.tasks.map(t => h('a', { class: 'chip', href: hrefFor('task', t.id), title: t.fm.title + ' (' + t.fm.status + ')' }, t.id + ' · ' + t.fm.status)))));
+  }
+
+  function viewSpecs(m) {
+    const cov = m.coverage.filter(c => matches(c.spec));
+    if (!cov.length) return [h('div', { class: 'empty card' }, m.specs.length ? 'No specs match the filter.' : 'No specs yet.')];
+    return cov.map(c => h('div', { class: 'card pad', style: 'margin-bottom:12px' },
+      h('div', { class: 'row' }, h('a', { class: 'mono', href: hrefFor('spec', c.spec.id) }, c.spec.id),
+        h('b', { class: 'grow' }, c.spec.fm.title || c.spec.name), c.spec.parseError ? badge('parse error', 'red') : badge(c.spec.fm.status), tagChips(c.spec.fm.tags)),
+      c.items.length ? h('div', { style: 'margin-top:8px' }, itemRows(c.items)) : h('div', { class: 'muted', style: 'margin-top:6px' }, 'No numbered requirement items.')));
+  }
+
+  function viewPlans(m) {
+    const ps = m.plans.filter(matches);
+    if (!ps.length) return [h('div', { class: 'empty card' }, m.plans.length ? 'No plans match the filter.' : 'No plans yet.')];
+    return ps.map(p => {
+      const pi = m.planInfo.get(p.id);
+      return h('div', { class: 'card pad', style: 'margin-bottom:12px' },
+        h('div', { class: 'row' }, h('a', { class: 'mono', href: hrefFor('plan', p.id) }, p.id), h('b', { class: 'grow' }, p.fm.title || p.name),
+          p.parseError ? badge('parse error', 'red') : badge(p.fm.status), chips(p.fm.implements)),
+        pi.needsClosing ? h('div', { class: 'banner' }, 'All tasks are done — this plan needs closing.') : null,
+        h('div', { style: 'margin:8px 0 4px' }, progress(pi.done, pi.total)),
+        h('div', { class: 'muted' }, pi.done + ' of ' + pi.total + ' tasks done'),
+        pi.tasks.length ? h('div', { style: 'margin-top:6px' }, pi.tasks.map(t => h('a', { class: 'chip', href: hrefFor('task', t.id), title: t.fm.title }, t.id + ' · ' + t.fm.status))) : null);
+    });
+  }
+
+  function viewDecisions(m) {
+    const ds = m.decisions.filter(matches);
+    if (!ds.length) return [h('div', { class: 'empty card' }, m.decisions.length ? 'No decisions match the filter.' : 'No decisions recorded yet.')];
+    return [h('div', { class: 'card list' }, ds.map(d => h('div', { class: 'row' },
+      h('a', { class: 'mono', href: hrefFor('decision', d.id) }, d.id), h('span', { class: 'grow' }, d.fm.title || d.name),
+      d.parseError ? badge('parse error', 'red') : badge(d.fm.status), h('span', { class: 'muted' }, d.fm.date || ''), chips(d.fm.relates))))];
+  }
+
+  function viewOutcomes(m) {
+    const os = m.outcomes.filter(matches);
+    return [h('p', { class: 'muted' }, 'Legacy outcome files. New work records its outcome inside the task.'),
+      h('div', { class: 'card list' }, os.map(o => h('div', { class: 'row' },
+        h('a', { class: 'mono', href: hrefFor('outcome', o.id) }, o.id), h('span', { class: 'grow' }, o.fm.title || o.name),
+        o.parseError ? badge('parse error', 'red') : badge(o.fm.result), h('span', { class: 'muted' }, o.fm.date || ''), chips(o.fm.tasks))))];
+  }
+
+  /* ----- Drawer ----- */
+  function metaList(pairs) {
+    const rows = pairs.filter(([, v]) => v != null && !(Array.isArray(v) && !v.length));
+    return h('dl', { class: 'meta' }, rows.map(([k, v]) => [h('dt', null, k), h('dd', null, v)]));
+  }
+
+  function drawerContent(m, det) {
+    const a = m.byId.get(det.id);
+    if (!a || a.type !== det.type) return [h('div', { class: 'empty' }, 'Nothing found for ' + det.id + '.')];
+    const f = a.fm;
+    const head = h('div', { class: 'row' }, h('span', { class: 'mono muted' }, a.id), a.parseError ? badge('parse error', 'red') : badge(f.status || f.result),
+      a.type === 'task' && f.priority && f.priority !== 'normal' ? badge(f.priority, 'amber') : null);
+    const title = h('h1', { style: 'font-size:20px;margin:6px 0 0' }, f.title || a.name);
+    const out = [head, title];
+    if (a.parseError) out.push(h('div', { class: 'perr' }, h('b', null, 'Could not fully parse '), h('span', { class: 'mono' }, a.path), h('div', null, a.parseError)));
+    if (a.type === 'task') {
+      const dn = a.acceptance.filter(x => x.done).length;
+      out.push(metaList([['Plan', f.plan ? chip(f.plan) : null], ['Covers', chips(f.covers)], ['Blocked by', (f.blocked_by || []).map(b => /^TASK-\d+$/.test(String(b)) ? chip(b) : h('span', null, b + ' '))],
+        ['Decisions', chips(f.decisions)], ['Tags', tagChips(f.tags)], ['Created', f.created], ['Updated', f.updated]]));
+      if (a.acceptance.length) out.push(h('div', null, progress(dn, a.acceptance.length)), h('div', { class: 'muted', style: 'margin:3px 0 8px' }, dn + ' of ' + a.acceptance.length + ' acceptance checks'));
+    } else if (a.type === 'spec') {
+      const c = m.coverage.find(x => x.spec === a);
+      out.push(metaList([['Tags', tagChips(f.tags)], ['Superseded by', f.superseded_by ? chip(f.superseded_by) : null], ['Created', f.created], ['Updated', f.updated]]));
+      if (c && c.items.length) out.push(...section('Requirement items', h('div', { class: 'card pad' }, itemRows(c.items))));
+    } else if (a.type === 'plan') {
+      const pi = m.planInfo.get(a.id);
+      out.push(metaList([['Implements', chips(f.implements)], ['Tags', tagChips(f.tags)], ['Created', f.created], ['Updated', f.updated]]));
+      if (pi.needsClosing) out.push(h('div', { class: 'banner' }, 'All tasks are done — this plan needs closing.'));
+      out.push(h('div', null, progress(pi.done, pi.total)), h('div', { class: 'muted', style: 'margin:3px 0 8px' }, pi.done + ' of ' + pi.total + ' tasks done'));
+      if (pi.tasks.length) out.push(h('div', null, pi.tasks.map(t => h('a', { class: 'chip', href: hrefFor('task', t.id), title: t.fm.title }, t.id + ' · ' + t.fm.status))));
+    } else if (a.type === 'decision') {
+      out.push(metaList([['Date', f.date], ['Relates to', chips(f.relates)], ['Superseded by', f.superseded_by ? chip(f.superseded_by) : null], ['Tags', tagChips(f.tags)]]));
+      const used = m.tasks.filter(t => !t.parseError && (t.fm.decisions || []).includes(a.id));
+      if (used.length) out.push(metaList([['Used by', used.map(t => chip(t.id))]]));
+    } else if (a.type === 'outcome') {
+      out.push(metaList([['Date', f.date], ['Tasks', chips(f.tasks)], ['Corrects', f.corrects ? chip(f.corrects) : null], ['Session', f.session],
+        ['Follow-ups', (f.follow_ups || []).length ? h('ul', { style: 'margin:0;padding-left:18px' }, f.follow_ups.map(x => h('li', null, typeof x === 'string' ? x : (x && x.text) || JSON.stringify(x)))) : null]]));
+    }
+    out.push(mdNode(a.body));
+    return out;
+  }
+
+  /* ----- Render ----- */
+  function renderStatus() {
+    const el = $('#status');
+    el.className = 'status' + (S.error ? ' err' : '');
+    if (S.error) el.textContent = S.needsReconnect ? 'Permission needed — click Reconnect' : 'Error: ' + S.error.message;
+    else if (S.busy) el.textContent = 'Refreshing…';
+    else if (S.lastRefresh) el.textContent = (S.paused ? 'Paused · ' : '') + 'Refreshed ' + S.lastRefresh.toLocaleTimeString();
+    else el.textContent = '';
+    $('#pause').textContent = S.paused ? 'Resume' : 'Pause';
+    $('#interval').value = String(S.interval);
+    $('#refreshNow').disabled = !S.handle || S.needsReconnect;
+    $('#change').textContent = S.handle ? 'Change folder' : 'Choose folder';
+  }
+
+  function render() {
+    const viewEl = $('#view'), drawerBody = $('#drawerBody');
+    const saved = { win: window.scrollY, drawer: drawerBody.scrollTop };
+    const r = route();
+    const m = S.model;
+    renderStatus();
+
+    const projName = (S.project && S.project.name) || (S.handle && S.handle.name) || '';
+    $('#brand').replaceChildren('Tracker', projName ? h('small', null, projName) : '');
+    document.title = (projName ? projName + ' · ' : '') + 'Tracker';
+
+    const tabs = TABS.filter(t => t !== 'outcomes' || (m && m.outcomes.length));
+    $('#tabs').replaceChildren(...tabs.map(t => {
+      const count = m ? { board: m.counts.open, specs: m.specs.length, plans: m.plans.length, decisions: m.decisions.length, outcomes: m.outcomes.length }[t] : null;
+      return h('a', { href: tabHref(t), class: t === r.tab ? 'active' : '' }, TAB_LABEL[t],
+        t === 'overview' ? (m && m.attention ? h('span', { class: 'count warn' }, m.attention) : null) : (count != null ? h('span', { class: 'count' }, count) : null));
+    }));
+
+    if (!m) {
+      viewEl.replaceChildren(connectPanel());
+    } else {
+      const fn = { overview: viewOverview, board: viewBoard, specs: viewSpecs, plans: viewPlans, decisions: viewDecisions, outcomes: viewOutcomes }[r.tab];
+      const nodes = [];
+      if (S.error) nodes.push(h('div', { class: 'perr' }, S.needsReconnect ? 'Folder permission was lost. ' : 'Last refresh failed: ' + S.error.message + ' ', S.needsReconnect ? h('button', { onclick: reconnect }, 'Reconnect') : null));
+      nodes.push(...fn(m));
+      viewEl.replaceChildren(...nodes);
+    }
+
+    if (r.detail && m) {
+      document.body.classList.add('drawer-open');
+      $('#drawerTitle').textContent = r.detail.id;
+      drawerBody.replaceChildren(...drawerContent(m, r.detail));
+    } else document.body.classList.remove('drawer-open');
+    window.scrollTo(0, saved.win);
+    drawerBody.scrollTop = saved.drawer;
+  }
+
+  function connectPanel() {
+    if (S.unsupported) return h('div', { class: 'connect' }, h('h1', null, 'Browser not supported'), h('p', null, 'This viewer reads your .tracker folder with the File System Access API. Open it in Microsoft Edge or Google Chrome.'));
+    if (S.needsReconnect && S.handle) return h('div', { class: 'connect' }, h('h1', null, 'Reconnect to ' + S.handle.name), h('p', null, 'The browser needs your permission again to read this folder (once per browser session).'), h('button', { class: 'primary', onclick: reconnect }, 'Reconnect'));
+    return h('div', { class: 'connect' },
+      h('h1', null, 'Open your .tracker folder'),
+      h('p', null, 'Pick the project folder (or its .tracker folder). Files are read in place and re-read automatically; nothing is uploaded or changed.'),
+      S.error ? h('div', { class: 'perr' }, S.error.message) : null,
+      h('button', { class: 'primary', onclick: pickFolder }, 'Choose folder'));
+  }
+
+  /* ----- Wiring ----- */
+  $('#filter').addEventListener('input', e => { S.filter = e.target.value.trim(); if (S.model) render(); });
+  $('#interval').addEventListener('change', e => { S.interval = Number(e.target.value); saveSettings(); schedule(); });
+  $('#pause').addEventListener('click', () => { S.paused = !S.paused; saveSettings(); renderStatus(); schedule(); });
+  $('#refreshNow').addEventListener('click', () => refresh(true));
+  $('#change').addEventListener('click', pickFolder);
+  $('#drawerClose').addEventListener('click', () => { location.hash = tabHref(route().tab); });
+  $('#backdrop').addEventListener('click', () => { location.hash = tabHref(route().tab); });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape' && document.body.classList.contains('drawer-open')) location.hash = tabHref(route().tab); });
+  window.addEventListener('hashchange', render);
+  document.addEventListener('visibilitychange', () => { if (!document.hidden && S.handle && !S.needsReconnect) refresh(); });
+
+  (async function init() {
+    render();
+    if (S.unsupported) return;
+    const saved = await idbGet('handle');
+    if (saved) {
+      S.handle = saved;
+      try {
+        const p = await saved.queryPermission({ mode: 'read' });
+        if (p === 'granted') { await refresh(true); schedule(); return; }
+        S.needsReconnect = true;
+      } catch (e) { S.handle = null; }
+    }
+    render();
+  })();
+}
+
+if (typeof document === 'undefined') {
+  globalThis.TrackerCore = { parseYaml, buildArtifact, buildModel, parseSpecItems, parseAcceptance, mdToHtml, refInfo, stripComments };
+} else {
+  boot();
+}
+</script>
+</body>
+</html>
